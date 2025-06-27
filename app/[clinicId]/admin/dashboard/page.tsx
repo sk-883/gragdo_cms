@@ -10,6 +10,8 @@ import { TransactionHistory } from "@/components/admin/dashboard/transaction-his
 import { AdminAppointments } from "@/components/admin/dashboard/admin-appointments"
 import { getAdminDashboardStats, getAdminDoctors, getAdminStaff, getAdminTransactions, getAdminAppointments } from "@/lib/actions/admin-dashboard"
 import { getClinicById } from "@/lib/actions/clinics"
+import { findById } from "@/lib/db"
+import { User } from "@/lib/types"
 
 interface AdminDashboardPageProps {
   params: {
@@ -26,16 +28,16 @@ export default async function AdminDashboardPage({ params }: AdminDashboardPageP
   }
 
   const [stats, doctors, staff, transactions, appointments] = await Promise.all([
-    getAdminDashboardStats(),
-    getAdminDoctors(),
-    getAdminStaff(),
-    getAdminTransactions(),
-    getAdminAppointments()
+    getAdminDashboardStats(params.clinicId),
+    getAdminDoctors(params.clinicId),
+    getAdminStaff(params.clinicId),
+    getAdminTransactions(params.clinicId),
+    getAdminAppointments(params.clinicId)
   ])
 
   return (
     <div className="flex h-screen bg-[#f4f3ff]">
-      <Sidebar userRole="ADMIN" />
+      <Sidebar userRole="ADMIN" clinicId={params.clinicId} />
       
       <main className="flex-1 overflow-auto ml-0 md:ml-0">
         <Header clinicName={clinic.name} location={clinic.address.split(',')[0]} />
@@ -61,7 +63,7 @@ export default async function AdminDashboardPage({ params }: AdminDashboardPageP
                   <div className="h-64 bg-gray-200 animate-pulse rounded-lg" />
                 </div>
               }>
-                <DailyRevenueReport />
+                <DailyRevenueReport clinicId={params.clinicId} />
               </Suspense>
             </div>
 
@@ -72,7 +74,7 @@ export default async function AdminDashboardPage({ params }: AdminDashboardPageP
                   <div className="h-64 bg-gray-200 animate-pulse rounded-lg" />
                 </div>
               }>
-                <DoctorsList doctors={doctors} />
+                <DoctorsList doctors={doctors} clinicId={params.clinicId} />
               </Suspense>
             </div>
 
@@ -83,7 +85,7 @@ export default async function AdminDashboardPage({ params }: AdminDashboardPageP
                   <div className="h-64 bg-gray-200 animate-pulse rounded-lg" />
                 </div>
               }>
-                <StaffList staff={staff} />
+                <StaffList staff={staff} clinicId={params.clinicId} />
               </Suspense>
             </div>
           </div>
@@ -97,7 +99,7 @@ export default async function AdminDashboardPage({ params }: AdminDashboardPageP
                   <div className="h-64 bg-gray-200 animate-pulse rounded-lg" />
                 </div>
               }>
-                <TransactionHistory transactions={transactions} />
+                <TransactionHistory transactions={transactions} clinicId={params.clinicId} />
               </Suspense>
             </div>
 
@@ -108,7 +110,7 @@ export default async function AdminDashboardPage({ params }: AdminDashboardPageP
                   <div className="h-64 bg-gray-200 animate-pulse rounded-lg" />
                 </div>
               }>
-                <AdminAppointments appointments={appointments} />
+                <AdminAppointments appointments={appointments} clinicId={params.clinicId} />
               </Suspense>
             </div>
           </div>
