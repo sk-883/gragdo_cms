@@ -1,6 +1,7 @@
 'use server'
 
 import { readData, writeData } from '@/lib/db';
+import { UserRole } from '@/lib/types';
 
 interface User {
   id: string;

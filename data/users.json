@@ -24,7 +24,7 @@
     "email": "operator@vishnuclinic.com",
     "name": "Reception Operator",
     "phone": "+91-9876543211",
-    "role": "USER",
+    "role": "STAFF",
     "clinicId": "1",
     "createdAt": "2024-01-01T00:00:00.000Z",
     "updatedAt": "2024-01-01T00:00:00.000Z"

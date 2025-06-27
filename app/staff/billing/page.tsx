@@ -8,7 +8,7 @@ export default async function BillingPage() {
 
   return (
     <div className="flex h-screen bg-[#f4f3ff]">
-      <Sidebar userRole="USER" />
+      <Sidebar userRole="STAFF" />
       
       <main className="flex-1 overflow-auto ml-0 md:ml-0">
         <Header />

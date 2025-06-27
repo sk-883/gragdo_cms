@@ -18,7 +18,7 @@ export default async function BedsPage({ params }: BedsPageProps) {
   }
 
   return (
-    <PageLayout userRole="USER">
+    <PageLayout userRole="STAFF">
       <Suspense fallback={
         <div className="text-center py-12">
           <p className="text-lg text-gray-500 font-sf-pro">Loading beds...</p>
