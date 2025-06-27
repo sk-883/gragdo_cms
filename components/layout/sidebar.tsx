@@ -3,12 +3,12 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { LayoutDashboard, Calendar, Users, UserCheck, FileText, CreditCard, Settings, ChevronDown, Building2, Menu, X, Users2, Receipt, Activity, Bed, Pill, FlaskRound as Flask } from "lucide-react"
+import { LayoutDashboard, Calendar, Users, UserCheck, FileText, CreditCard, Settings, ChevronDown, Building2, Menu, X, Users2, Receipt, Activity, Bed, Pill, FlaskRound as Flask, Clock } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 interface SidebarProps {
-  userRole: 'SUPER_ADMIN' | 'ADMIN' | 'USER'
+  userRole: 'SUPER_ADMIN' | 'ADMIN' | 'USER' | 'DOCTOR'
 }
 
 export function Sidebar({ userRole }: SidebarProps) {
@@ -135,66 +135,102 @@ export function Sidebar({ userRole }: SidebarProps) {
     }
   ]
 
-  // Staff menu items (existing)
+  // Doctor menu items
+  const doctorMenuItems = [
+    {
+      name: "Dashboard",
+      href: "/doctor/dashboard",
+      icon: LayoutDashboard,
+      roles: ['DOCTOR']
+    },
+    {
+      name: "Patients",
+      href: "/doctor/patients",
+      icon: Users,
+      roles: ['DOCTOR']
+    },
+    {
+      name: "Appointments",
+      href: "/doctor/appointments",
+      icon: Calendar,
+      roles: ['DOCTOR']
+    },
+    {
+      name: "Schedule",
+      href: "/doctor/schedule",
+      icon: Clock,
+      roles: ['DOCTOR']
+    },
+    {
+      name: "Prescriptions",
+      href: "/doctor/prescriptions",
+      icon: FileText,
+      roles: ['DOCTOR']
+    },
+    {
+      name: "Settings",
+      href: "/doctor/settings",
+      icon: Settings,
+      roles: ['DOCTOR']
+    }
+  ]
+
+  // Staff menu items
   const staffMenuItems = [
     {
       name: "Dashboard",
-      href: "/dashboard",
+      href: "/user/dashboard",
       icon: LayoutDashboard,
       roles: ['USER']
     },
     {
       name: "Appointments",
-      href: "/appointments",
+      href: "/user/appointments",
       icon: Calendar,
       roles: ['USER']
     },
     {
       name: "Patients",
-      href: "/patients",
+      href: "/user/patients",
       icon: Users,
-      roles: ['USER'],
-      hasSubmenu: true,
-      submenu: [
-        { name: "All Patients", href: "/patients" },
-        { name: "Add Patient", href: "/patients/add" }
-      ]
+      roles: ['USER']
     },
     {
       name: "Doctors",
-      href: "/doctors",
+      href: "/user/doctors",
       icon: UserCheck,
       roles: ['USER']
     },
     {
       name: "Rooms",
-      href: "/rooms",
+      href: "/user/rooms",
       icon: Bed,
       roles: ['USER']
     },
     {
       name: "Prescriptions",
-      href: "/prescriptions",
+      href: "/user/prescriptions",
       icon: FileText,
       roles: ['USER']
     },
     {
       name: "Billing & Invoice",
-      href: "/billing",
+      href: "/user/billing",
       icon: CreditCard,
       roles: ['USER']
     },
     {
       name: "Settings",
-      href: "/settings",
+      href: "/user/settings",
       icon: Settings,
       roles: ['USER']
     }
   ]
 
-  // Determine which menu items to show based on current path
-  const isAdminPath = pathname.startsWith('/admin')
-  const menuItems = isAdminPath ? adminMenuItems : staffMenuItems
+  // Determine which menu items to show based on user role
+  let menuItems = userRole === 'DOCTOR' 
+    ? doctorMenuItems 
+    : (userRole === 'USER' ? staffMenuItems : adminMenuItems);
   
   const filteredMenuItems = menuItems.filter(item => 
     item.roles.includes(userRole)
