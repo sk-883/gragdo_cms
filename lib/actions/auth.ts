@@ -25,7 +25,22 @@ export async function login(credentials: LoginCredentials) {
     const response = await authApi.login(credentials.email, credentials.password, credentials.role)
     
     if (response.success) {
-      // The cookie is set by the backend, so we don't need to set it here
+      // Set the auth token in a cookie
+      cookies().set('auth-token', response.access, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+        path: '/',
+      })
+      
+      // Set the refresh token in a cookie
+      cookies().set('refresh-token', response.refresh, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: '/',
+      })
+      
       return {
         success: true,
         user: response.user
@@ -44,7 +59,22 @@ export async function signup(data: SignupData) {
     const response = await authApi.signup(data)
     
     if (response.success) {
-      // The cookie is set by the backend, so we don't need to set it here
+      // Set the auth token in a cookie
+      cookies().set('auth-token', response.access, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 7 * 24 * 60 * 60, // 7 days
+        path: '/',
+      })
+      
+      // Set the refresh token in a cookie
+      cookies().set('refresh-token', response.refresh, {
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        maxAge: 30 * 24 * 60 * 60, // 30 days
+        path: '/',
+      })
+      
       return {
         success: true,
         user: response.user
@@ -107,8 +137,10 @@ export async function logout() {
   try {
     await authApi.logout()
     
-    // Clear the auth cookie on the client side as well
+    // Clear the auth cookie
     cookies().delete('auth-token')
+    // Clear the refresh token cookie
+    cookies().delete('refresh-token')
     
     return { success: true }
   } catch (error) {
@@ -129,5 +161,42 @@ export async function getCurrentUser(token?: string) {
   } catch (error) {
     console.error('Error getting current user:', error)
     return null
+  }
+}
+
+export async function refreshToken() {
+  try {
+    const refreshToken = cookies().get('refresh-token')?.value
+    
+    if (!refreshToken) {
+      return { success: false, error: 'No refresh token found' }
+    }
+    
+    const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api'}/auth/token/refresh/`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ refresh: refreshToken }),
+    })
+    
+    if (!response.ok) {
+      return { success: false, error: 'Failed to refresh token' }
+    }
+    
+    const data = await response.json()
+    
+    // Set the new access token in a cookie
+    cookies().set('auth-token', data.access, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      maxAge: 7 * 24 * 60 * 60, // 7 days
+      path: '/',
+    })
+    
+    return { success: true }
+  } catch (error) {
+    console.error('Error refreshing token:', error)
+    return { success: false, error: 'An error occurred while refreshing token' }
   }
 }
