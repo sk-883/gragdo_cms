@@ -1,95 +1,101 @@
 "use server";
 
-import { readData, writeData } from "@/lib/db";
+import { patientsApi } from '@/lib/services/api';
 import { Gender, Patient } from "@/lib/types";
+import { Document, DocumentType } from "@/lib/models";
 
-export async function createPatient(data: {
-  name: string;
+export async function createPatientRecord(data: {
+  firstName: string;
+  lastName: string;
   email?: string;
   phone: string;
   gender: Gender;
-  age: number;
+  dateOfBirth: string;
+  bloodGroup?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
   medicalHistory?: string;
-  allergies?: string;
+  allergies?: string[];
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    phone: string;
+  };
   clinicId: string;
   createdById: string;
+  documents?: {
+    name: string;
+    type: string;
+    file: Buffer;
+    contentType: string;
+  }[];
 }) {
   try {
-    const now = new Date().toISOString();
+    const response = await patientsApi.createPatient(data);
     
-    const patients = await readData<Patient[]>("patients");
-    
-    // Generate a unique patient ID with prefix PAT
-    const patientId = `PAT${Math.floor(100000 + Math.random() * 900000)}`;
-    
-    const newPatient: Patient = {
-      id: `pat-${(patients.length + 1).toString().padStart(3, '0')}`,
-      patientId,
-      ...data,
-      createdAt: now,
-      updatedAt: now
-    };
-    
-    patients.push(newPatient);
-    await writeData("patients", patients);
-
-    return { success: true, patient: newPatient };
+    if (response.success) {
+      return { success: true, patient: response.patient };
+    } else {
+      return { success: false, error: response.error || 'Failed to create patient' };
+    }
   } catch (error) {
     console.error('Error creating patient:', error);
     return { success: false, error: 'Failed to create patient' };
   }
 }
 
-export async function updatePatient(id: string, data: {
-  name?: string;
+export async function updatePatientRecord(id: string, data: {
+  firstName?: string;
+  lastName?: string;
   email?: string;
   phone?: string;
   gender?: Gender;
-  age?: number;
+  dateOfBirth?: string;
+  bloodGroup?: string;
   address?: string;
+  city?: string;
+  state?: string;
+  postalCode?: string;
   medicalHistory?: string;
-  allergies?: string;
+  allergies?: string[];
+  emergencyContact?: {
+    name: string;
+    relationship: string;
+    phone: string;
+  };
+  isActive?: boolean;
+  documents?: {
+    name: string;
+    type: string;
+    file: Buffer;
+    contentType: string;
+  }[];
 }) {
   try {
-    const patients = await readData<Patient[]>("patients");
-    const patientIndex = patients.findIndex(p => p.id === id);
+    const response = await patientsApi.updatePatient(id, data);
     
-    if (patientIndex === -1) {
-      return { success: false, error: 'Patient not found' };
+    if (response.success) {
+      return { success: true, patient: response.patient };
+    } else {
+      return { success: false, error: response.error || 'Failed to update patient' };
     }
-    
-    const updatedData = {
-      ...data,
-      updatedAt: new Date().toISOString()
-    };
-    
-    const updatedPatient = {
-      ...patients[patientIndex],
-      ...updatedData
-    };
-    
-    patients[patientIndex] = updatedPatient;
-    await writeData("patients", patients);
-    
-    return { success: true, patient: updatedPatient };
   } catch (error) {
     console.error('Error updating patient:', error);
     return { success: false, error: 'Failed to update patient' };
   }
 }
 
-export async function deletePatient(id: string) {
+export async function deletePatientRecord(id: string) {
   try {
-    const patients = await readData<Patient[]>("patients");
-    const updatedPatients = patients.filter(p => p.id !== id);
+    const response = await patientsApi.deletePatient(id);
     
-    if (updatedPatients.length === patients.length) {
-      return { success: false, error: 'Patient not found' };
+    if (response.success) {
+      return { success: true };
+    } else {
+      return { success: false, error: response.error || 'Failed to delete patient' };
     }
-    
-    await writeData("patients", updatedPatients);
-    return { success: true };
   } catch (error) {
     console.error('Error deleting patient:', error);
     return { success: false, error: 'Failed to delete patient' };
@@ -98,17 +104,14 @@ export async function deletePatient(id: string) {
 
 export async function getPatients(clinicId?: string) {
   try {
-    const patients = await readData<Patient[]>("patients");
+    const response = await patientsApi.getPatients(clinicId);
     
-    // Filter by clinicId if provided
-    const filteredPatients = clinicId 
-      ? patients.filter(p => p.clinicId === clinicId)
-      : patients;
-    
-    // Sort by createdAt in descending order
-    return filteredPatients.sort((a, b) => 
-      new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-    );
+    if (response.success) {
+      return response.patients;
+    } else {
+      console.error('Error fetching patients:', response.error);
+      return [];
+    }
   } catch (error) {
     console.error('Error fetching patients:', error);
     return [];
@@ -117,42 +120,14 @@ export async function getPatients(clinicId?: string) {
 
 export async function getPatientById(id: string) {
   try {
-    const patients = await readData<Patient[]>("patients");
-    const patient = patients.find(p => p.id === id);
+    const response = await patientsApi.getPatient(id);
     
-    if (!patient) {
+    if (response.success) {
+      return response.patient;
+    } else {
+      console.error('Error fetching patient:', response.error);
       return null;
     }
-    
-    // Get appointments for this patient
-    const appointments = await readData("appointments");
-    const patientAppointments = appointments
-      .filter(a => a.patientId === id)
-      .sort((a, b) => new Date(b.appointmentDate).getTime() - new Date(a.appointmentDate).getTime());
-    
-    // Get doctor details for each appointment
-    const doctors = await readData("doctors");
-    
-    const appointmentsWithDoctors = patientAppointments.map((appointment) => {
-      const doctor = doctors.find(d => d.id === appointment.doctorId);
-      return {
-        ...appointment,
-        doctor,
-        appointmentDate: new Date(appointment.appointmentDate)
-      };
-    });
-    
-    // Get prescriptions for this patient
-    const prescriptions = await readData("prescriptions");
-    const patientPrescriptions = prescriptions
-      .filter(p => p.patientId === id)
-      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    
-    return {
-      ...patient,
-      appointments: appointmentsWithDoctors,
-      prescriptions: patientPrescriptions
-    };
   } catch (error) {
     console.error('Error fetching patient:', error);
     return null;

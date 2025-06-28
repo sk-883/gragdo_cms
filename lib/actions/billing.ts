@@ -1,79 +1,151 @@
 'use server'
 
-import { readData, writeData } from '@/lib/db';
+import { billingApi } from '@/lib/services/api';
 
-interface Invoice {
-  id: string;
-  invoiceNo: string;
-  patientName: string;
-  phone: string;
-  createdDate: string;
-  dueDate: string;
-  amount: number;
-  status: 'Paid' | 'Pending' | 'Overdue';
+export async function createInvoiceRecord(data: {
+  patientId: string;
+  clinicId: string;
+  appointmentId?: string;
   items: {
     description: string;
     quantity: number;
-    rate: number;
-    amount: number;
+    unitPrice: number;
+    type: string;
+    medicineId?: string;
+    treatmentId?: string;
   }[];
+  discount: number;
+  tax: number;
+  dueDate: string;
+  notes?: string;
+  createdById: string;
+  document?: {
+    file: Buffer;
+    contentType: string;
+  };
+}) {
+  try {
+    const response = await billingApi.createInvoice(data);
+    
+    if (response.success) {
+      return { success: true, invoice: response.invoice };
+    } else {
+      return { success: false, error: response.error || 'Failed to create invoice' };
+    }
+  } catch (error) {
+    console.error('Error creating invoice:', error);
+    return { success: false, error: 'Failed to create invoice' };
+  }
 }
 
-export async function getInvoices() {
+export async function updateInvoiceRecord(id: string, data: {
+  items?: {
+    id?: string;
+    description: string;
+    quantity: number;
+    unitPrice: number;
+    type: string;
+    medicineId?: string;
+    treatmentId?: string;
+  }[];
+  discount?: number;
+  tax?: number;
+  dueDate?: string;
+  status?: string;
+  notes?: string;
+  document?: {
+    file: Buffer;
+    contentType: string;
+  };
+}) {
   try {
-    const invoices = await readData<Invoice[]>('invoices', []);
+    const response = await billingApi.updateInvoice(id, data);
     
-    if (invoices.length === 0) {
-      // Mock data for demo purposes
-      return [
-        {
-          id: '1',
-          invoiceNo: '#123456',
-          patientName: 'K. Vijay',
-          phone: '9876543210',
-          createdDate: '01/06/2025',
-          dueDate: '05/06/2025',
-          amount: 10000,
-          status: 'Paid',
-          items: [
-            { description: 'Consultation Fee', quantity: 1, rate: 500, amount: 500 },
-            { description: 'Medical Tests', quantity: 1, rate: 9500, amount: 9500 }
-          ]
-        },
-        {
-          id: '2',
-          invoiceNo: '#454575',
-          patientName: 'P. Sandeep',
-          phone: '9876543210',
-          createdDate: '01/06/2025',
-          dueDate: '05/06/2025',
-          amount: 10000,
-          status: 'Pending',
-          items: [
-            { description: 'General Checkup', quantity: 1, rate: 300, amount: 300 },
-            { description: 'Lab Tests', quantity: 1, rate: 9700, amount: 9700 }
-          ]
-        },
-        {
-          id: '3',
-          invoiceNo: '#787764',
-          patientName: 'Ch. Asritha',
-          phone: '9876543210',
-          createdDate: '01/06/2025',
-          dueDate: '05/06/2025',
-          amount: 10000,
-          status: 'Overdue',
-          items: [
-            { description: 'Gynecology Consultation', quantity: 1, rate: 400, amount: 400 },
-            { description: 'Ultrasound', quantity: 1, rate: 9600, amount: 9600 }
-          ]
-        }
-      ];
+    if (response.success) {
+      return { success: true, invoice: response.invoice };
+    } else {
+      return { success: false, error: response.error || 'Failed to update invoice' };
     }
+  } catch (error) {
+    console.error('Error updating invoice:', error);
+    return { success: false, error: 'Failed to update invoice' };
+  }
+}
+
+export async function deleteInvoiceRecord(id: string) {
+  try {
+    const response = await billingApi.deleteInvoice(id);
     
-    return invoices;
+    if (response.success) {
+      return { success: true };
+    } else {
+      return { success: false, error: response.error || 'Failed to delete invoice' };
+    }
+  } catch (error) {
+    console.error('Error deleting invoice:', error);
+    return { success: false, error: 'Failed to delete invoice' };
+  }
+}
+
+export async function getInvoices(clinicId?: string, patientId?: string, status?: string) {
+  try {
+    const response = await billingApi.getInvoices({
+      clinicId,
+      patientId,
+      status
+    });
+    
+    if (response.success) {
+      return response.invoices;
+    } else {
+      console.error('Error fetching invoices:', response.error);
+      return [];
+    }
   } catch (error) {
     console.error('Error fetching invoices:', error);
     return [];
+  }
+}
+
+export async function getInvoiceById(id: string) {
+  try {
+    const response = await billingApi.getInvoice(id);
+    
+    if (response.success) {
+      return response.invoice;
+    } else {
+      console.error('Error fetching invoice:', response.error);
+      return null;
+    }
+  } catch (error) {
+    console.error('Error fetching invoice:', error);
+    return null;
+  }
+}
+
+export async function recordPayment(data: {
+  invoiceId: string;
+  amount: number;
+  paymentMethod: string;
+  description: string;
+  patientId: string;
+  clinicId: string;
+  createdById: string;
+  document?: {
+    file: Buffer;
+    contentType: string;
+  };
+}) {
+  try {
+    const response = await billingApi.recordPayment(data);
+    
+    if (response.success) {
+      return { success: true, transaction: response.transaction };
+    } else {
+      return { success: false, error: response.error || 'Failed to record payment' };
+    }
+  } catch (error) {
+    console.error('Error recording payment:', error);
+    return { success: false, error: 'Failed to record payment' };
   }
 }

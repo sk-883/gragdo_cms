@@ -1,7 +1,8 @@
-"use server"
+'use server'
 
-import { readData } from "@/lib/db"
-import { UserRole, User } from "@/lib/types"
+import { cookies } from 'next/headers'
+import { UserRole } from "@/lib/types"
+import { authApi } from '@/lib/services/api'
 
 interface LoginCredentials {
   email: string
@@ -21,30 +22,16 @@ interface SignupData {
 
 export async function login(credentials: LoginCredentials) {
   try {
-    // In a real app, you would validate credentials against a database
-    // For demo purposes, we'll just check if the user exists
-    const users = await readData<User[]>("users", [])
-    const user = users.find(
-      (u) => u.email === credentials.email && u.role === credentials.role
-    )
-
-    if (!user) {
-      return { success: false, error: "Invalid credentials" }
-    }
-
-    // In a real app, you would verify the password here
-    // For demo purposes, we'll just return success
-
-    return {
-      success: true,
-      user: {
-        id: user.id,
-        name: user.name,
-        email: user.email,
-        role: user.role,
-        clinicId: user.clinicId,
-        clinicIds: user.clinicIds
+    const response = await authApi.login(credentials.email, credentials.password, credentials.role)
+    
+    if (response.success) {
+      // The cookie is set by the backend, so we don't need to set it here
+      return {
+        success: true,
+        user: response.user
       }
+    } else {
+      return { success: false, error: response.error || "Invalid credentials" }
     }
   } catch (error) {
     console.error("Error during login:", error)
@@ -54,20 +41,16 @@ export async function login(credentials: LoginCredentials) {
 
 export async function signup(data: SignupData) {
   try {
-    // In a real app, you would create a new user in the database
-    // For demo purposes, we'll just return success
+    const response = await authApi.signup(data)
     
-    const fullName = `${data.firstName} ${data.lastName}`.trim()
-    
-    return {
-      success: true,
-      user: {
-        id: Math.random().toString(36).substring(2, 15),
-        name: fullName,
-        email: data.email,
-        role: data.role,
-        clinicId: data.clinicId
+    if (response.success) {
+      // The cookie is set by the backend, so we don't need to set it here
+      return {
+        success: true,
+        user: response.user
       }
+    } else {
+      return { success: false, error: response.error || "Signup failed" }
     }
   } catch (error) {
     console.error("Error during signup:", error)
@@ -77,10 +60,28 @@ export async function signup(data: SignupData) {
 
 export async function forgotPassword(email: string) {
   try {
-    // In a real app, you would send a password reset email
-    // For demo purposes, we'll just return success
+    const response = await authApi.forgotPassword(email)
     
-    return { success: true, message: "Password reset email sent" }
+    return { 
+      success: response.success, 
+      message: response.message,
+      error: response.error 
+    }
+  } catch (error) {
+    console.error("Error during password reset:", error)
+    return { success: false, error: "An error occurred during password reset" }
+  }
+}
+
+export async function resetPassword(token: string, newPassword: string) {
+  try {
+    const response = await authApi.resetPassword(token, newPassword)
+    
+    return { 
+      success: response.success, 
+      message: response.message,
+      error: response.error 
+    }
   } catch (error) {
     console.error("Error during password reset:", error)
     return { success: false, error: "An error occurred during password reset" }
@@ -92,12 +93,41 @@ export async function getRedirectPathForRole(role: UserRole, clinicId?: string, 
     case UserRole.SUPER_ADMIN:
       return "/clinics"
     case UserRole.ADMIN:
-      return clinicId ? `/${clinicId}/admin/dashboard` : "/admin/dashboard"
+      return clinicId && userId ? `/${clinicId}/admin/${userId}/dashboard` : "/admin/dashboard"
     case UserRole.STAFF:
       return clinicId && userId ? `/${clinicId}/staff/${userId}/dashboard` : "/staff/dashboard"
     case UserRole.DOCTOR:
       return clinicId && userId ? `/${clinicId}/doctor/${userId}/dashboard` : "/doctor/dashboard"
     default:
       return "/"
+  }
+}
+
+export async function logout() {
+  try {
+    await authApi.logout()
+    
+    // Clear the auth cookie on the client side as well
+    cookies().delete('auth-token')
+    
+    return { success: true }
+  } catch (error) {
+    console.error("Error during logout:", error)
+    return { success: false, error: "An error occurred during logout" }
+  }
+}
+
+export async function getCurrentUser(token?: string) {
+  try {
+    const response = await authApi.getCurrentUser()
+    
+    if (response.success) {
+      return response.user
+    }
+    
+    return null
+  } catch (error) {
+    console.error('Error getting current user:', error)
+    return null
   }
 }
